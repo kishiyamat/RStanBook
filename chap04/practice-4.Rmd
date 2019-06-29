@@ -10,6 +10,9 @@ library(ggplot2)
 library(tidyverse)
 # install.packages("ggmcmc")
 library("ggmcmc")
+library(parallel)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
 ```
 
 Data import and preprocess
@@ -21,18 +24,16 @@ N1 <- 30
 N2 <- 20
 Y1 <- rnorm(n=N1, mean=0, sd=5)
 Y2 <- rnorm(n=N2, mean=1, sd=4)
-
-# Preprocess and visualize
-d1 <- data.frame(Y=Y1, G=factor(1))
-d2 <- data.frame(Y=Y2, G=factor(2))
-d <- rbind(d1, d2)
 ```
 
 ## Visualize (Assignment 1)
 
-
-
 ```{r}
+# Preprocess and visualize
+d1 <- data.frame(Y=Y1, G=factor(1))
+d2 <- data.frame(Y=Y2, G=factor(2))
+d <- rbind(d1, d2)
+
 d %>%
     ggplot(aes(y=Y, x=G)) +
     geom_boxplot()
@@ -40,18 +41,19 @@ d %>%
 
 ## Make a model (Assignment 2)
 
-* $\mu[n] =  b_1 + b_2 G[n]$ (transformed parameter)
-* $Y[n] \gets Normal(\mu[n], \sigma)$
+* $Y1[n] \gets Normal(\mu1, \sigma)$
+* $Y2[n] \gets Normal(\mu2, \sigma)$
 
 ## Make stan files and excute them (Assignment 3)
 
 ```{r}
-data <- list(N = nrow(d),
-             G = as.numeric(d$G),
-             Y = d$Y)
+data <- list(N1 = N1,
+             N2 = N2,
+             Y1 = Y1,
+             Y2 = Y2)
 fit <- stan(file='model/practice-4-3.stan', data=data, seed=1234)
 save.image(file="output/practice-4-3.RData")
-summary(fit)$summary[c("b1","b2","sigma"),]
+summary(fit)$summary[c("mu1","mu2","sigma"),]
 ```
 
 ## Culculate P(mu_1 < mu_2) (Assignment 4)
@@ -62,44 +64,25 @@ load("output/practice-4-3.RData")
 
 # mcmc sample
 ms <- rstan::extract(fit)
-# calculate
-mu_1 <- ms$b1 + ms$b2 * 1
-mu_2 <- ms$b1 + ms$b2 * 2
 
-# count n of T
-length(mu_1)
-sum(mu_1 < mean(mu_2))/length(mu_1)
+# calculate True==1, False==0
+mean(ms$mu1 < ms$mu2)
 ```
 
 ## different sigma (Assignment 5)
 
 ```{r}
-data.2 <- list(N = nrow(d),
-             G = as.numeric(d$G),
-             Y = d$Y)
-fit.2 <- stan(file='model/practice-4-5.stan', data=data.2, seed=1234)
+fit.2 <- stan(file='model/practice-4-5.stan', data=data, seed=1234)
 save.image(file="output/practice-4-5.RData")
-summary(fit.2)$summary[c("b1","b2","b3","b4"),]
+summary(fit.2)$summary[c("mu1","mu2","sigma1","sigma2"),]
 ```
 ```{r}
 # fit
 load("output/practice-4-5.RData")
 
 # mcmc sample
-ms <- rstan::extract(fit.2)
-# calculate
-mu_1 <- ms$b1 + ms$b2 * 1
-mu_2 <- ms$b1 + ms$b2 * 2
-mean(mu_1)
-mean(mu_2)
+ms.2 <- rstan::extract(fit.2)
 
-# count n of T
-length(mu_1)
-sum(mu_1 < mean(mu_2))/length(mu_1)
-
-# calculate
-sigma_1 <- ms$b3 + ms$b4 * 1
-sigma_2 <- ms$b3 + ms$b4 * 2
-mean(sigma_1)
-mean(sigma_2)
+# calculate True==1, False==0
+mean(ms.2$mu1 < ms.2$mu2)
 ```

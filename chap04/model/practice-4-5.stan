@@ -1,29 +1,22 @@
-// for exercise 2
 data {
-  int N;
-  int G[N];
-  real Y[N];
+  int N1;
+  int N2;
+  real Y1[N1];
+  real Y2[N2];
 }
 
 parameters {
-  real b1;
-  real b2;
-  real b3;
-  real b4;
-}
-
-transformed parameters {
-  real mu[N];
-  real<lower=0> sigma[N];
-  
-  for (n in 1:N)
-    mu[n] = b1 + b2*G[n];
-  
-  for (n in 1:N)
-    sigma[n] = b3 + b4*G[n];
+  real mu1;
+  real mu2;
+  real<lower=0> sigma1;
+  real<lower=0> sigma2;
 }
 
 model {
-  for (n in 1:N)
-    Y[n] ~ normal(mu[n], sigma[n]);
+    
+  for (n in 1:N1)
+    Y1[n] ~ normal(mu1, sigma1);
+    
+  for (n in 1:N2)
+    Y2[n] ~ normal(mu2, sigma2);
 }
