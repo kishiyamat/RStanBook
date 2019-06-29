@@ -1,0 +1,105 @@
+---
+title: "Practice 4"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rstan)
+library(ggplot2)
+library(tidyverse)
+# install.packages("ggmcmc")
+library("ggmcmc")
+```
+
+Data import and preprocess
+
+```{r}
+set.seed(123)
+
+N1 <- 30
+N2 <- 20
+Y1 <- rnorm(n=N1, mean=0, sd=5)
+Y2 <- rnorm(n=N2, mean=1, sd=4)
+
+# Preprocess and visualize
+d1 <- data.frame(Y=Y1, G=factor(1))
+d2 <- data.frame(Y=Y2, G=factor(2))
+d <- rbind(d1, d2)
+```
+
+## Visualize (Assignment 1)
+
+
+
+```{r}
+d %>%
+    ggplot(aes(y=Y, x=G)) +
+    geom_boxplot()
+```
+
+## Make a model (Assignment 2)
+
+* $\mu[n] =  b_1 + b_2 G[n]$ (transformed parameter)
+* $Y[n] \gets Normal(\mu[n], \sigma)$
+
+## Make stan files and excute them (Assignment 3)
+
+```{r}
+data <- list(N = nrow(d),
+             G = as.numeric(d$G),
+             Y = d$Y)
+fit <- stan(file='model/practice-4-3.stan', data=data, seed=1234)
+save.image(file="output/practice-4-3.RData")
+summary(fit)$summary[c("b1","b2","sigma"),]
+```
+
+## Culculate P(mu_1 < mu_2) (Assignment 4)
+
+```{r}
+# fit
+load("output/practice-4-3.RData")
+
+# mcmc sample
+ms <- rstan::extract(fit)
+# calculate
+mu_1 <- ms$b1 + ms$b2 * 1
+mu_2 <- ms$b1 + ms$b2 * 2
+
+# count n of T
+length(mu_1)
+sum(mu_1 < mean(mu_2))/length(mu_1)
+```
+
+## different sigma (Assignment 5)
+
+```{r}
+data.2 <- list(N = nrow(d),
+             G = as.numeric(d$G),
+             Y = d$Y)
+fit.2 <- stan(file='model/practice-4-5.stan', data=data.2, seed=1234)
+save.image(file="output/practice-4-5.RData")
+summary(fit.2)$summary[c("b1","b2","b3","b4"),]
+```
+```{r}
+# fit
+load("output/practice-4-5.RData")
+
+# mcmc sample
+ms <- rstan::extract(fit.2)
+# calculate
+mu_1 <- ms$b1 + ms$b2 * 1
+mu_2 <- ms$b1 + ms$b2 * 2
+mean(mu_1)
+mean(mu_2)
+
+# count n of T
+length(mu_1)
+sum(mu_1 < mean(mu_2))/length(mu_1)
+
+# calculate
+sigma_1 <- ms$b3 + ms$b4 * 1
+sigma_2 <- ms$b3 + ms$b4 * 2
+mean(sigma_1)
+mean(sigma_2)
+```
